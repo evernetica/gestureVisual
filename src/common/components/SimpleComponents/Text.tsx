@@ -33,6 +33,7 @@ const StyledText = styled.Text<TextInterface>`
   ${({ fontWeight }): number | undefined => fontWeight && `font-weight: ${fontWeight}`};
   ${({ textAlign }): string | undefined => textAlign && `text-align: ${textAlign}`};
   ${({ width }): string | undefined => width && `width: ${width}`};
+  ${({ color }): string | undefined => color && `color: ${color}`};
   ${({ height }): string | undefined => height && `height: ${height}`};
   ${({ letterSpacing }): string | undefined => letterSpacing && `letter-spacing: ${letterSpacing}`};
   ${({ lineHeight }): string | undefined => lineHeight && `line-height: ${lineHeight}`};

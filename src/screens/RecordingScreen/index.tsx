@@ -1,61 +1,24 @@
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 
-import { StyleSheet } from "react-native";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  runOnJS
-} from "react-native-reanimated";
+import Animated, { useSharedValue, runOnJS } from "react-native-reanimated";
 import { useCallback, useEffect, useState } from "react";
 import { Block, Button, Image, Text } from "../../common/components/SimpleComponents";
 import History from "../../assets/images/history.png";
 import { useNavigation } from "@react-navigation/native";
 import { Directions } from "react-native-gesture-handler";
 import { useHistoryContext } from "../../common/HistoryContext.ts";
-import debounce from "lodash/debounce.js";
+import PointerElement from "../../common/components/AnimatedPointer.tsx";
 
 let stepInterval = 0.01;
 
-function PointerElement(props: {
-  pointer: Animated.SharedValue<Pointer>,
-  active: Animated.SharedValue<boolean>,
-}) {
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: props.pointer.value.x },
-      { translateY: props.pointer.value.y },
-      {
-        scale:
-          (props.pointer.value.visible ? 1 : 0) *
-          (props.active.value ? 1.3 : 1)
-      }
-    ],
-    backgroundColor: "blue"
-  }));
-
-  return <Animated.View style={[styles.pointer, animatedStyle]} />;
-}
-
-const styles = StyleSheet.create({
-  pointer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "red",
-    position: "absolute",
-    marginStart: -30,
-    marginTop: -30
-  }
-});
 let timeout;
 export default function Example() {
   const trackedPointers: Animated.SharedValue<Pointer>[] = [];
   const active = useSharedValue(false);
   const [logs, setLogs] = useState([]);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [gestureText, setGestureText] = useState("");
+  const [gestureText, setText] = useState("");
   const { navigate } = useNavigation();
-  const { history, setHistory } = useHistoryContext();
+  const { setHistory } = useHistoryContext();
 
   useEffect(() => {
     if (timeout) {
@@ -66,25 +29,25 @@ export default function Example() {
     });
   }, [logs]);
 
+  const setGestureText = useCallback((text) => {
+    setText(text);
+  }, [logs]);
 
   useEffect(() => {
+    if (timeout) {
+      clearTimeout(timeout);
+    }
     if (gestureText && logs.length > 0) {
-      setHistory(current => {
-        return [...current, { actions: logs, title: gestureText }];
-      });
-      setLogs([])
+      timeout = setTimeout(() => {
+        setHistory(current => {
+          return [...current, { actions: logs, title: gestureText }];
+        });
+        setLogs([]);
+        setText("");
+      }, 800);
     }
-  }, [gestureText, logs]);
 
-
-  useEffect(() => {
-    if (gestureText) {
-      setTimeout(() => {
-        setGestureText("");
-      }, 1000);
-    }
-  }, [gestureText]);
-
+  }, [logs, gestureText]);
 
   for (let i = 0; i < 12; i++) {
     trackedPointers[i] = useSharedValue(
@@ -129,7 +92,6 @@ export default function Example() {
       }
       runOnJS(updateLogs)(updatedTrackedPointers);
 
-
       if (e.numberOfTouches >= 2) {
         manager.activate();
       }
@@ -150,7 +112,6 @@ export default function Example() {
         };
       }
       runOnJS(updateLogs)(updatedTrackedPointers);
-
     })
     .onTouchesUp((e, manager) => {
       const updatedTrackedPointers = {};
@@ -178,65 +139,32 @@ export default function Example() {
     navigate("History");
   };
 
-  useEffect(() => {
-    if (isPlaying) {
-      let i = 0;
-      const interval = setInterval(() => {
-        if (i < logs.length) {
-          const log = logs[i];
-          const updatedTrackedPointers = log.value;
-          for (const key in updatedTrackedPointers) {
-            trackedPointers[key].value = updatedTrackedPointers[key];
-          }
-          i++;
-        } else {
-          clearInterval(interval);
-        }
-      }, stepInterval * 1000);
-    }
-  }, [isPlaying]);
-
   const longPress = Gesture.LongPress()
     .onStart(() => {
-      console.log("start");
       runOnJS(setGestureText)(`Long press`);
     });
-
-  const debounseZoomThrottlingFunc = debounce((text) => {
-    setGestureText(text);
-  }, 1000);
-
-  const saveDrawingLogs = debounce((logs) => {
-    setHistory(current => {
-      return [...current, { actions: logs, title: "Drawing" }];
-    });
-  }, 5000);
-
-  const handleThrotle = (text) => {
-    debounseZoomThrottlingFunc(text);
-  };
 
   const pinch = Gesture.Pinch()
     .simultaneousWithExternalGesture(gestureManual)
     .onUpdate((callback) => {
       if (callback.numberOfPointers === 2) {
-        runOnJS(handleThrotle)(`Pinch zoom ${Number(callback.scale).toFixed(2)}`);
-
+        runOnJS(setGestureText)(`Pinch zoom`);
       }
     })
-    .onEnd((e, success) => {
+    .onEnd((e) => {
+      runOnJS(setGestureText)(`Pinch zoom ${Number(e.scale).toFixed(2)}`);
     });
 
   const flingRight = Gesture.Fling()
     .direction(Directions.RIGHT)
     .simultaneousWithExternalGesture(gestureManual)
-    .onEnd((callback) => {
+    .onEnd(() => {
       runOnJS(setGestureText)(`Swipe right`);
     });
   const flingLeft = Gesture.Fling()
     .direction(Directions.LEFT)
     .simultaneousWithExternalGesture(gestureManual)
-    .onEnd((callback) => {
+    .onEnd(() => {
       runOnJS(setGestureText)(`Swipe left`);
     });
   const flingTop = Gesture.Fling()
@@ -250,7 +178,7 @@ export default function Example() {
   const flingDown = Gesture.Fling()
     .direction(Directions.DOWN)
     .simultaneousWithExternalGesture(gestureManual)
-    .onEnd((callback) => {
+    .onEnd(() => {
       runOnJS(setGestureText)(`Swipe down`);
     });
 
@@ -281,8 +209,10 @@ export default function Example() {
           >
             <Text
               color={"white"}
-              fontSize={"20px"}
-            >{gestureText}</Text>
+              fontSize={"22px"}
+            >
+              {gestureText}
+            </Text>
           </Block>
           <Button
             bg="white"
@@ -290,14 +220,12 @@ export default function Example() {
             bottom={"0"}
             right={"0"}
             borderRad={"50px"}
-            // style={{ backgroundColor: "white", width: 100, height: 100, position: "absolute", bottom: 0, right: 0 }}
             onPress={handlePlay}
             width={"70px"}
             height={"70px"}
             alignItems={"center"}
             justifyContent={"center"}
           >
-
             <Image
               source={History}
               imageWidth={"50px"}

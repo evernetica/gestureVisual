@@ -1,17 +1,11 @@
 import { createContext, useContext } from "react";
 
 type HistoryContextTypes = {
-  setSearchString: null | string;
-  searchString?: () => void;
-  isScanning: boolean;
-  filters: {
-    [key: string]: string;
-  };
+  history: [object];
+  setHistory: () => void;
 };
 
-const HistoryContext = createContext<HistoryContextTypes>({
-  setSearchString: () => null,
-});
+const HistoryContext = createContext<HistoryContextTypes>({});
 
 const HistoryContextProvider = HistoryContext.Provider;
 const useHistoryContext = (): HistoryContextTypes => useContext(HistoryContext);

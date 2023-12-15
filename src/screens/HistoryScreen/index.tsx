@@ -1,58 +1,20 @@
-import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
-
-import { StyleSheet, Text, TouchableOpacity } from "react-native";
-import Animated, {
-  useAnimatedStyle,
-  useSharedValue,
-  useAnimatedReaction, runOnJS
-} from "react-native-reanimated";
+import Animated, { useSharedValue } from "react-native-reanimated";
 import { useEffect, useState } from "react";
-import { Button, Image } from "../../common/components/SimpleComponents";
+import { Block, Button, Image, StyledScrollView, Text } from "../../common/components/SimpleComponents";
 import PlayImage from "../../assets/images/play-button.png";
-import History from "../../assets/images/history.png";
+import { useHistoryContext } from "../../common/HistoryContext.ts";
+import { useNavigation } from "@react-navigation/native";
+import PointerElement from "../../common/components/AnimatedPointer.tsx";
+import RecordingIcon from "../../assets/images/button.png";
 
 let stepInterval = 0.01;
-
-function PointerElement(props: {
-  pointer: Animated.SharedValue<Pointer>,
-  active: Animated.SharedValue<boolean>,
-}) {
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [
-      { translateX: props.pointer.value.x },
-      { translateY: props.pointer.value.y },
-      {
-        scale:
-          (props.pointer.value.visible ? 1 : 0) *
-          (props.active.value ? 1.3 : 1)
-      }
-    ],
-    backgroundColor: "blue"
-  }));
-
-  return <Animated.View style={[styles.pointer, animatedStyle]} />;
-}
-
-const styles = StyleSheet.create({
-  pointer: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: "red",
-    position: "absolute",
-    marginStart: -30,
-    marginTop: -30
-  }
-});
 
 export default function Example() {
   const trackedPointers: Animated.SharedValue<Pointer>[] = [];
   const active = useSharedValue(false);
   const [logs, setLogs] = useState([]);
-  const [isPlaying, setIsPlaying] = useState(false);
-
-
-  const visualEffects = null;
+  const { goBack } = useNavigation();
+  const { history } = useHistoryContext();
 
   for (let i = 0; i < 12; i++) {
     trackedPointers[i] = useSharedValue(
@@ -63,44 +25,77 @@ export default function Example() {
       });
   }
 
-  let timestamp = null;
+  useEffect(() => {
+    let i = 0;
+    const interval = setInterval(() => {
+      if (i < logs.length) {
+        const log = logs[i];
+        const updatedTrackedPointers = log.value;
+        for (const key in updatedTrackedPointers) {
+          trackedPointers[key].value = updatedTrackedPointers[key];
+        }
+        i++;
+      } else {
+        clearInterval(interval);
+        trackedPointers.forEach(pointer => {
+          pointer.value = {
+            visible: false,
+            x: 0,
+            y: 0
+          };
+        });
+      }
+    }, stepInterval * 1000);
+  }, [logs]);
 
-  const handlePlay = () => {
-    setIsPlaying(current => !current);
+  const handleLogsSelect = (item) => () => {
+    setLogs(item.actions);
   };
-
-  // useEffect(() => {
-  //   if (isPlaying) {
-  //     let i = 0;
-  //     const interval = setInterval(() => {
-  //       if (i < logs.length) {
-  //         const log = logs[i];
-  //         const updatedTrackedPointers = log.value;
-  //         for (const key in updatedTrackedPointers) {
-  //           trackedPointers[key].value = updatedTrackedPointers[key];
-  //         }
-  //         i++;
-  //       } else {
-  //         clearInterval(interval);
-  //       }
-  //     }, stepInterval * 1000);
-  //   }
-  // }, [isPlaying]);
-
-  console.log("isPlaying");
-  console.log(isPlaying);
   return (
     <Animated.View style={{ flex: 1, backgroundColor: "white" }}>
       {trackedPointers.map((pointer, index) => (
         <PointerElement pointer={pointer} active={active} key={index} />
       ))}
+      <Block
+        position={"absolute"}
+        left={"16px"}
+        pt={"40px"}
+        height={"100%"}
+      >
+        <Text fontSize={"22px"}>Logs</Text>
+        {
+          history.length === 0 && <Text>Empty</Text>
+        }
+        <StyledScrollView>
+          {
+            history.map((item, index) => (
+              <Button
+                pt={"16px"}
+                pb={"16px"}
+                key={item.title + index}
+                alignItems={"center"}
+                onPress={handleLogsSelect(item)}
+                flexDirection={"row"}
+                justifyContent={"space-between"}
+              >
+                <Text mr={"16px"}>{item.title}</Text>
+                <Image
+                  source={PlayImage}
+                  imageWidth={"16px"}
+                  imageHeight={"16px"}
+                />
+              </Button>
+            ))
+          }
+        </StyledScrollView>
+
+      </Block>
       <Button
-        bg="white"
         position={"absolute"}
         bottom={"0"}
         right={"0"}
         borderRad={"50px"}
-        // onPress={handle}
+        onPress={goBack}
         width={"70px"}
         height={"70px"}
         alignItems={"center"}
@@ -108,7 +103,7 @@ export default function Example() {
 
       >
         <Image
-          source={History}
+          source={RecordingIcon}
           imageWidth={"50px"}
           imageHeight={"50px"}
         />

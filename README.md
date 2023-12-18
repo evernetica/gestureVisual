@@ -1,4 +1,4 @@
-custom gesture tracking application with simple visualisation and replay possibility
+React native custom gesture tracking application with simple visualisation and replay possibility
 Supported gestures:
 - swipe left
 - swipe right
@@ -10,5 +10,5 @@ Supported gestures:
 Libraries used:
 - react-navigation
 - react-native-gesture-handler
-- react-native-reanimated
+- react-native-reanimated 
 - styled-components
